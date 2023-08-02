@@ -10,8 +10,3 @@ yd2vcan.o:
 clean:
 	rm -f build/*
 	rm -f *~
-
-install:
-	cp -a build/yd2vcan /usr/bin/
-	cp -a yd2vcan.sh /usr/bin
-	[ ! -e /etc/yd2vcan.conf ] && cp -a yd2vcan.conf /etc/yd2vcan.conf || exit 0
