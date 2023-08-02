@@ -36,7 +36,7 @@ PRINTF_BINARY_PATTERN_INT32 PRINTF_BINARY_PATTERN_INT32
 PRINTF_BYTE_TO_BINARY_INT32((i) >> 32), PRINTF_BYTE_TO_BINARY_INT32(i)
 /*--- end macros --- */
 
-int snet, scan;
+int debug=0, snet, scan;
 
 void printcanframe(char *title, struct can_frame canframe, char *netframe)
 {
@@ -160,7 +160,7 @@ void *ydnr2can()
       perror("Write");
       exit(1);
     }
-    else
+    else if ( debug > 0 )
     {
       printcanframe("Net to CAN", frame, buff);
     }
@@ -193,16 +193,60 @@ void *can2ydnr()
     }
 
     strcat(buff, "\r\n");
-    write(snet, buff, sizeof(buff));
-    printcanframe("CAN to Net", frame, buff);
+    if (write(snet, buff, sizeof(buff)) != sizeof(buff))
+    {
+      perror("Write");
+      exit(1);
+    }
+    else if ( debug > 0 )
+    {
+      printcanframe("CAN to Net", frame, buff);
+    }
   }
 }
 
 int main(int argc, char **argv)
 {
-  if ( (snet = openydnr("192.168.8.100", 1457)) < 0 )
+    int opt, port=0;
+    char ip[255]="",canport[255]="";
+      
+    while((opt = getopt(argc, argv, ":i:p:c:dx")) != -1) 
+    { 
+        switch(opt) 
+        { 
+	    case 'd':
+		    debug++;
+		    printf("Debug %d\n", debug);
+		    break;
+            case 'i': 
+		strcpy(ip, optarg);
+                break; 
+            case 'p': 
+                sscanf(optarg, "%d", &port);
+                break; 
+            case 'c': 
+		strcpy(canport, optarg);
+                break; 
+            case ':': 
+                printf("option needs a value\n"); 
+                break; 
+            case '?': 
+                printf("unknown option: %c\n", optopt);
+                break; 
+        } 
+    } 
+     
+  if ( ( port == 0 ) | ( ip[0] == '\0' ) | ( canport[0] == '\0') )
+  {
+	 printf("Usage :  yd2vcan -i <ip of yachtd gateway> -p <port of yathd gateway raw/tcp> -c <name of can device>");
+	 return 32;
+  }
+
+  printf("YDNR device: \"%s:%d\"\nCAN device: \"%s\"\n", ip, port, canport);
+
+  if ( (snet = openydnr(ip, port)) < 0 )
     return -1;
-  if ( (scan = opencan("vcan0")) < 0 )
+  if ( (scan = opencan(canport)) < 0 )
     return -1;
 
   pthread_t thread_id_send, thread_id_rcv;
