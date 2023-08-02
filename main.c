@@ -246,11 +246,13 @@ int main(int argc, char **argv)
      
   if ( ( port == 0 ) | ( ip[0] == '\0' ) | ( canport[0] == '\0') )
   {
-	 printf("Usage :  yd2vcan -i <ip of yachtd gateway> -p <port of yathd gateway raw/tcp> -c <name of can device>\n");
+	 printf("Usage :  yd2vcan -i <ip of yachtd gateway> -p <port of yathd gateway raw/tcp> -c <name of can device>\r\n");
 	 return 32;
   }
 
-  printf("YDNR device: \"%s:%d\"\nCAN device: \"%s\"\n", ip, port, canport);
+  printf("YDNR device: \"%s:%d\"\r\n", ip, port);
+  printf("CAN device: \"%s\"\r\n", canport);
+  printf("Log level : %d", debug);
 
   if ( (snet = openydnr(ip, port)) < 0 )
     return -1;
