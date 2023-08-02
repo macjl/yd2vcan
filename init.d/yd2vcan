@@ -1,0 +1,45 @@
+#! /bin/sh
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+DAEMON=/usr/bin/yd2vcan
+NAME=yd2vcan
+DESC=yd2vcan
+
+test -x $DAEMON || exit 0
+
+# Include yd2vcan conf
+if [ -f /etc/yd2vcan.conf ] ; then
+        . /etc/yd2vcan.conf
+fi
+
+set -e
+
+case "$1" in
+  start)
+        echo -n "Starting $DESC: "
+        start-stop-daemon --start --quiet --background \
+                --name $NAME --exec $DAEMON -- $DAEMON_OPTS
+        echo "$NAME."
+        ;;
+  stop)
+        echo -n "Stopping $DESC: "
+        start-stop-daemon -K --quiet \
+                --name $NAME
+        echo "$NAME."
+        ;;
+  restart)
+        echo -n "Restarting $DESC: "
+        start-stop-daemon -K --quiet \
+                --name $NAME
+        sleep 1
+        start-stop-daemon --start --quiet --background \
+                --name $NAME --exec $DAEMON -- $DAEMON_OPTS
+        echo "$NAME."
+        ;;
+  *)
+        N=/etc/init.d/$NAME
+        echo "Usage: $N {start|stop|restart|" >&2
+        exit 1
+        ;;
+esac
+
+exit 0
