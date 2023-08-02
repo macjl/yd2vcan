@@ -80,33 +80,28 @@ void ydnr2canframe(char *ydnr, struct can_frame *canframe)
 
 int openydnr(char *ip, int port)
 {
-  int sockfd;
-  struct sockaddr_in servaddr;
+  int socketfd;
+  struct sockaddr_in addr;
 
- 	// socket create and verification
-  sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  if (sockfd == -1)
+  if ((socketfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
   {
-    printf("socket creation failed...\n");
-    exit(0);
+    perror("Inet socket");
+    return -1;
   }
 
-  printf("Socket successfully created..\n");
-  bzero(&servaddr, sizeof(servaddr));
+  bzero(&addr, sizeof(addr));
 
- 	// assign IP, PORT
-  servaddr.sin_family = AF_INET;
-  servaddr.sin_addr.s_addr = inet_addr(ip);
-  servaddr.sin_port = htons(port);
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = inet_addr(ip);
+  addr.sin_port = htons(port);
 
- 	// connect the client socket to server socket
-  if (connect(sockfd, (SA*) &servaddr, sizeof(servaddr)) != 0)
+  if (connect(socketfd, (SA*) &addr, sizeof(addr)) < 0)
   {
-    printf("connection with the server failed...\n");
-    exit(0);
+    perror("Inet connect");
+    return -1;
   }
 
-  return sockfd;
+  return socketfd;
 }
 
 int opencan( char *canport)
@@ -115,25 +110,23 @@ int opencan( char *canport)
   struct sockaddr_can addr;
   struct ifreq ifr;
 
- 	//printf("CAN Sockets Receive Demo\r\n");
-
   if ((socketfd = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0)
   {
-    perror("Socket");
-    return 1;
+    perror("CAN Socket");
+    return -1;
   }
 
+  bzero(&addr, sizeof(addr));
+
+  addr.can_family = AF_CAN;
   strcpy(ifr.ifr_name, canport);
   ioctl(socketfd, SIOCGIFINDEX, &ifr);
-
-  memset(&addr, 0, sizeof(addr));
-  addr.can_family = AF_CAN;
   addr.can_ifindex = ifr.ifr_ifindex;
 
   if (bind(socketfd, (struct sockaddr *) &addr, sizeof(addr)) < 0)
   {
-    perror("Bind");
-    return 1;
+    perror("CAN Bind");
+    return -1;
   }
 
   return socketfd;
@@ -207,8 +200,10 @@ void *can2ydnr()
 
 int main(int argc, char **argv)
 {
-  snet = openydnr("192.168.8.100", 1457);
-  scan = opencan("vcan0");
+  if ( (snet = openydnr("192.168.8.100", 1457)) < 0 )
+    return -1;
+  if ( (scan = opencan("vcan0")) < 0 )
+    return -1;
 
   pthread_t thread_id_send, thread_id_rcv;
 
@@ -217,6 +212,9 @@ int main(int argc, char **argv)
 
   pthread_join(thread_id_send, NULL);
   pthread_join(thread_id_rcv, NULL);
+
+  close(snet);
+  close(scan);
 
   return 0;
 }
