@@ -7,5 +7,5 @@ Bi-directionnal gateway between YachD NMEA 2000 RAW and a vcan interface.
 make
 make install
 edit /etc/yd2vcan.conf
-update-rc.d yd2vcan defaults 99
+echo "/usr/bin/yd2vcan.sh" >> /data/rc.local
 ````

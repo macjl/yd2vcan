@@ -12,5 +12,5 @@ clean:
 
 install:
 	cp -a build/yd2vcan /usr/bin/
-	cp -a init.d/yd2vcan /etc/init.d/
-	cp -a init.d/yd2vcan.conf /etc/yd2vcan.conf
+	cp -a yd2vcan.sh /usr/bin
+	[ ! -e /etc/yd2vcan.conf ] && cp -a yd2vcan.conf /etc/yd2vcan.conf || exit 0

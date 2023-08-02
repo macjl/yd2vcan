@@ -246,7 +246,7 @@ int main(int argc, char **argv)
      
   if ( ( port == 0 ) | ( ip[0] == '\0' ) | ( canport[0] == '\0') )
   {
-	 printf("Usage :  yd2vcan -i <ip of yachtd gateway> -p <port of yathd gateway raw/tcp> -c <name of can device>");
+	 printf("Usage :  yd2vcan -i <ip of yachtd gateway> -p <port of yathd gateway raw/tcp> -c <name of can device>\n");
 	 return 32;
   }
 
