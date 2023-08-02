@@ -9,6 +9,7 @@ yd2vcan.o:
 
 clean:
 	rm -f build/*
+	rm -f *~
 
 install:
 	cp -a build/yd2vcan /usr/bin/
