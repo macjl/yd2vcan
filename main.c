@@ -51,7 +51,7 @@ void printcanframe(char *title, struct can_frame canframe, char *netframe)
   printf("%*s | %*s | %s", -11, title, -40, canstr, netframe);
 }
 
-void ydnr2canframe(char *ydnr, struct can_frame *canframe)
+int ydnr2canframe(char *ydnr, struct can_frame *canframe)
 {
   char buffer[9];
   unsigned long ibuff;
@@ -75,6 +75,13 @@ void ydnr2canframe(char *ydnr, struct can_frame *canframe)
     sscanf(buffer, "%lx", &ibuff);
     canframe->data[i] = ibuff;
    	//printf("%d - ", ibuff);
+  }
+
+  if (ydnr[13] == 'T')
+  {
+    return -1;
+  } else {
+    return 0;
   }
 }
 
@@ -153,16 +160,17 @@ void *ydnr2can()
 
    	//printf("YDNR line : %s", buff);
 
-    ydnr2canframe(buff, &frame);
+    if (ydnr2canframe(buff, &frame) == 0) {
 
-    if (write(scan, &frame, sizeof(struct can_frame)) != sizeof(struct can_frame))
-    {
-      perror("Write");
-      exit(1);
-    }
-    else if ( debug > 0 )
-    {
-      printcanframe("Net to CAN", frame, buff);
+      if (write(scan, &frame, sizeof(struct can_frame)) != sizeof(struct can_frame))
+      {
+        perror("Write");
+        exit(1);
+      }
+      else if ( debug > 0 )
+      {
+        printcanframe("Net to CAN", frame, buff);
+      }
     }
   }
 }
