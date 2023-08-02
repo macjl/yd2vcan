@@ -2,29 +2,56 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
 #include <net/if.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
-
 #include <linux/can.h>
 #include <linux/can/raw.h>
-
 #include <pthread.h>
-
 #include <arpa/inet.h>
+
 #define SA struct sockaddr
+
+/* --- PRINTF_BYTE_TO_BINARY macro's --- */
+#define PRINTF_BINARY_PATTERN_INT8 "%c%c%c%c%c%c%c%c"
+#define PRINTF_BYTE_TO_BINARY_INT8(i)    \
+    (((i) & 0x80ll) ? '1' : '0'), \
+    (((i) & 0x40ll) ? '1' : '0'), \
+    (((i) & 0x20ll) ? '1' : '0'), \
+    (((i) & 0x10ll) ? '1' : '0'), \
+    (((i) & 0x08ll) ? '1' : '0'), \
+    (((i) & 0x04ll) ? '1' : '0'), \
+    (((i) & 0x02ll) ? '1' : '0'), \
+    (((i) & 0x01ll) ? '1' : '0')
+
+#define PRINTF_BINARY_PATTERN_INT16 \
+    PRINTF_BINARY_PATTERN_INT8              PRINTF_BINARY_PATTERN_INT8
+#define PRINTF_BYTE_TO_BINARY_INT16(i) \
+    PRINTF_BYTE_TO_BINARY_INT8((i) >> 8),   PRINTF_BYTE_TO_BINARY_INT8(i)
+#define PRINTF_BINARY_PATTERN_INT32 \
+    PRINTF_BINARY_PATTERN_INT16             PRINTF_BINARY_PATTERN_INT16
+#define PRINTF_BYTE_TO_BINARY_INT32(i) \
+    PRINTF_BYTE_TO_BINARY_INT16((i) >> 16), PRINTF_BYTE_TO_BINARY_INT16(i)
+#define PRINTF_BINARY_PATTERN_INT64    \
+    PRINTF_BINARY_PATTERN_INT32             PRINTF_BINARY_PATTERN_INT32
+#define PRINTF_BYTE_TO_BINARY_INT64(i) \
+    PRINTF_BYTE_TO_BINARY_INT32((i) >> 32), PRINTF_BYTE_TO_BINARY_INT32(i)
+/* --- end macros --- */
+
 
 int snet, scan;
 
 void printcanframe(char *title, struct can_frame canframe, char *netframe)
 {
-        printf("%s = %08x [%d]",title, canframe.can_id, canframe.can_dlc);
+        char canstr[60], buff[20];
+        sprintf(canstr, "%08X [%d] ", canframe.can_id & CAN_EFF_MASK, canframe.can_dlc);
         for (int i=0; i<canframe.can_dlc ; i++)
         {
-                printf(" %02x", canframe.data[i]);
+                sprintf(buff, " %02X", canframe.data[i]);
+                strcat(canstr, buff);
         }
-        printf(" <<-->> %s", netframe);
+
+        printf("%*s | %*s | %s", -11, title, -40, canstr, netframe);
 }
 
 void ydnr2canframe(char *ydnr, struct can_frame *canframe)
@@ -36,8 +63,9 @@ void ydnr2canframe(char *ydnr, struct can_frame *canframe)
         buffer[8]='\0';
         strncpy(buffer, ydnr + 15, 8);
         sscanf(buffer, "%8x", &ibuff);
-        canframe->can_id = ibuff << 4;
-        canframe->can_id = ibuff & 0x1fffffff | 0x80000000;
+        canframe->can_id = ibuff | CAN_EFF_FLAG;
+        //printf("bit: "PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(ibuff));
+        //printf("bit: "PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(canframe->can_id));
 
         // printf("Get CAN DLC\n");
         canframe->can_dlc = ( strlen(ydnr) - 25 ) / 3 ;
@@ -105,7 +133,7 @@ int opencan()
                 perror("Bind");
                 return 1;
         }
-                return socketfd;
+        return socketfd;
 }
 
 void *ydnr2can()
@@ -141,7 +169,7 @@ void *ydnr2can()
 
 void *can2ydnr()
 {
-            char buff[40], buff2[2];
+            char buff[60], buff2[2];
                 struct can_frame frame;
                 int nbytes;
 
@@ -153,14 +181,15 @@ void *can2ydnr()
                         exit(1);
                 }
 
-                sprintf(buff, "%08.8lx ",frame.can_id & 0x1fffffff);
+                sprintf(buff, "%08.8lX ",frame.can_id & CAN_EFF_MASK);
+                //printf("bit: "PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(frame.can_id));
 
                 for (int i = 0; i < frame.can_dlc; i++) {
-                        sprintf(buff2, "%02x ",frame.data[i]);
+                        sprintf(buff2, "%02X ",frame.data[i]);
                         strcat(buff, buff2);
                 }
 
-                strcat(buff, "\n");
+                strcat(buff, "\r\n");
                 write(snet, buff, sizeof(buff));
                                 printcanframe("CAN to Net", frame, buff);
         }
@@ -168,17 +197,16 @@ void *can2ydnr()
 
 int main(int argc, char **argv)
 {
+    snet = openydnr();
+    scan = opencan();
+    
+    pthread_t thread_id_send, thread_id_rcv;
 
-        snet = openydnr();
-        scan = opencan();
+    pthread_create(&thread_id_send, NULL, ydnr2can, NULL);
+    pthread_create(&thread_id_rcv, NULL, can2ydnr, NULL);
 
-                pthread_t thread_id_send, thread_id_rcv;
+    pthread_join(thread_id_send, NULL);
+    pthread_join(thread_id_rcv, NULL);
 
-                pthread_create(&thread_id_send, NULL, ydnr2can, NULL);
-                pthread_create(&thread_id_rcv, NULL, can2ydnr, NULL);
-
-                pthread_join(thread_id_send, NULL);
-                pthread_join(thread_id_rcv, NULL);
-
-        return 0;
+    return 0;
 }
