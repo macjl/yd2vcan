@@ -59,7 +59,7 @@ void ydnr2canframe(char *ydnr, struct can_frame *canframe)
 	// printf(" Get CAN ID\n");
 	buffer[8] = '\0';
 	strncpy(buffer, ydnr + 15, 8);
-	sscanf(buffer, "%8x", &ibuff);
+	sscanf(buffer, "%8lx", &ibuff);
 	canframe->can_id = ibuff | CAN_EFF_FLAG;
 	//printf("bit: "PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(ibuff));
 	//printf("bit: "PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(canframe->can_id));
@@ -72,7 +72,7 @@ void ydnr2canframe(char *ydnr, struct can_frame *canframe)
 	for (int i = 0; i < canframe->can_dlc; i++)
 	{
 		strncpy(buffer, ydnr + 24 + (3 *i), 2);
-		sscanf(buffer, "%x", &ibuff);
+		sscanf(buffer, "%lx", &ibuff);
 		canframe->data[i] = ibuff;
 		//printf("%d - ", ibuff);
 	}
@@ -80,8 +80,8 @@ void ydnr2canframe(char *ydnr, struct can_frame *canframe)
 
 int openydnr()
 {
-	int sockfd, connfd;
-	struct sockaddr_in servaddr, cli;
+	int sockfd;
+	struct sockaddr_in servaddr;
 
 	// socket create and verification
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -176,7 +176,7 @@ void *ydnr2can()
 
 void *can2ydnr()
 {
-	char buff[60], buff2[2];
+	char buff[60], buff2[4];
 	struct can_frame frame;
 	int nbytes;
 
@@ -190,12 +190,12 @@ void *can2ydnr()
 			exit(1);
 		}
 
-		sprintf(buff, "%08.8lX ", frame.can_id &CAN_EFF_MASK);
+		sprintf(buff, "%08lX", (long unsigned int) frame.can_id &CAN_EFF_MASK);
 		//printf("bit: "PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(frame.can_id));
 
 		for (int i = 0; i < frame.can_dlc; i++)
 		{
-			sprintf(buff2, "%02X ", frame.data[i]);
+			sprintf(buff2, " %02X", frame.data[i]);
 			strcat(buff, buff2);
 		}
 
