@@ -41,7 +41,7 @@ int snet, scan;
 void printcanframe(char *title, struct can_frame canframe, char *netframe)
 {
   char canstr[60], buff[20];
-  sprintf(canstr, "%08X[%d] ", canframe.can_id &CAN_EFF_MASK, canframe.can_dlc);
+  sprintf(canstr, "%08X [%d] ", canframe.can_id &CAN_EFF_MASK, canframe.can_dlc);
   for (int i = 0; i < canframe.can_dlc; i++)
   {
     sprintf(buff, " %02X", canframe.data[i]);
@@ -78,7 +78,7 @@ void ydnr2canframe(char *ydnr, struct can_frame *canframe)
   }
 }
 
-int openydnr()
+int openydnr(char *ip, int port)
 {
   int sockfd;
   struct sockaddr_in servaddr;
@@ -96,8 +96,8 @@ int openydnr()
 
  	// assign IP, PORT
   servaddr.sin_family = AF_INET;
-  servaddr.sin_addr.s_addr = inet_addr("192.168.8.100");
-  servaddr.sin_port = htons(1457);
+  servaddr.sin_addr.s_addr = inet_addr(ip);
+  servaddr.sin_port = htons(port);
 
  	// connect the client socket to server socket
   if (connect(sockfd, (SA*) &servaddr, sizeof(servaddr)) != 0)
@@ -109,7 +109,7 @@ int openydnr()
   return sockfd;
 }
 
-int opencan()
+int opencan( char *canport)
 {
   int socketfd;
   struct sockaddr_can addr;
@@ -123,7 +123,7 @@ int opencan()
     return 1;
   }
 
-  strcpy(ifr.ifr_name, "vcan0");
+  strcpy(ifr.ifr_name, canport);
   ioctl(socketfd, SIOCGIFINDEX, &ifr);
 
   memset(&addr, 0, sizeof(addr));
@@ -207,8 +207,8 @@ void *can2ydnr()
 
 int main(int argc, char **argv)
 {
-  snet = openydnr();
-  scan = opencan();
+  snet = openydnr("192.168.8.100", 1457);
+  scan = opencan("vcan0");
 
   pthread_t thread_id_send, thread_id_rcv;
 
