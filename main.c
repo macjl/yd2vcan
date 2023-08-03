@@ -191,7 +191,13 @@ void *can2ydnr()
       exit(1);
     }
 
-    sprintf(buff, "%08lX", (long unsigned int) frame.can_id &CAN_EFF_MASK);
+    if ( frame.can_id & CAN_EFF_FLAG )
+    {
+        sprintf(buff, "%08lX", (long unsigned int) frame.can_id & CAN_EFF_MASK);
+    } else {
+        sprintf(buff, "%04lX", (long unsigned int) frame.can_id);
+    }
+
    	//printf("bit: "PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(frame.can_id));
 
     for (int i = 0; i < frame.can_dlc; i++)
