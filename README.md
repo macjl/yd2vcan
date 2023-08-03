@@ -9,6 +9,6 @@ cd yd2vcan
 make
 cp yd2vcan-sample.conf yd2vcan.conf
 edit yd2vcan.conf
-echo "$PWD/startup.sh" >> /data/rc.local
+echo "$PWD/startup.sh &" >> /data/rc.local
 chmod +x /data/rc.local
 ````

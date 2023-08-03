@@ -41,7 +41,14 @@ int debug=0, snet, scan;
 void printcanframe(char *title, struct can_frame canframe, char *netframe)
 {
   char canstr[60], buff[20];
-  sprintf(canstr, "%08X [%d] ", canframe.can_id &CAN_EFF_MASK, canframe.can_dlc);
+
+  if ( canframe.can_id & CAN_EFF_FLAG )
+  {
+  	sprintf(canstr, "%08X [%d] ", canframe.can_id & CAN_EFF_MASK, canframe.can_dlc);
+  } else {
+  	sprintf(canstr, "%03X [%d] ", canframe.can_id, canframe.can_dlc);
+  }
+
   for (int i = 0; i < canframe.can_dlc; i++)
   {
     sprintf(buff, " %02X", canframe.data[i]);
@@ -195,7 +202,7 @@ void *can2ydnr()
     {
         sprintf(buff, "%08lX", (long unsigned int) frame.can_id & CAN_EFF_MASK);
     } else {
-        sprintf(buff, "%04lX", (long unsigned int) frame.can_id);
+        sprintf(buff, "%03lX", (long unsigned int) frame.can_id);
     }
 
    	//printf("bit: "PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(frame.can_id));
