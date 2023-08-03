@@ -11,31 +11,6 @@
 #include <arpa/inet.h>
 #define SA struct sockaddr
 
-/*--- PRINTF_BYTE_TO_BINARY macro's --- */
-#define PRINTF_BINARY_PATTERN_INT8 "%c%c%c%c%c%c%c%c"
-#define PRINTF_BYTE_TO_BINARY_INT8(i)\
-  (((i) &0x80 ll) ? '1' : '0'), \
-  (((i) &0x40 ll) ? '1' : '0'), \
-  (((i) &0x20 ll) ? '1' : '0'), \
-  (((i) &0x10 ll) ? '1' : '0'), \
-  (((i) &0x08 ll) ? '1' : '0'), \
-  (((i) &0x04 ll) ? '1' : '0'), \
-  (((i) &0x02 ll) ? '1' : '0'), \
-  (((i) &0x01 ll) ? '1' : '0')
-#define PRINTF_BINARY_PATTERN_INT16\
-PRINTF_BINARY_PATTERN_INT8 PRINTF_BINARY_PATTERN_INT8
-#define PRINTF_BYTE_TO_BINARY_INT16(i)\
-PRINTF_BYTE_TO_BINARY_INT8((i) >> 8), PRINTF_BYTE_TO_BINARY_INT8(i)
-#define PRINTF_BINARY_PATTERN_INT32\
-PRINTF_BINARY_PATTERN_INT16 PRINTF_BINARY_PATTERN_INT16
-#define PRINTF_BYTE_TO_BINARY_INT32(i)\
-PRINTF_BYTE_TO_BINARY_INT16((i) >> 16), PRINTF_BYTE_TO_BINARY_INT16(i)
-#define PRINTF_BINARY_PATTERN_INT64\
-PRINTF_BINARY_PATTERN_INT32 PRINTF_BINARY_PATTERN_INT32
-#define PRINTF_BYTE_TO_BINARY_INT64(i)\
-PRINTF_BYTE_TO_BINARY_INT32((i) >> 32), PRINTF_BYTE_TO_BINARY_INT32(i)
-/*--- end macros --- */
-
 int debug=0, snet, scan, c2y_nb=0, y2c_nb=0, y2b_nb=0;
 
 void printcanframe(char *title, struct can_frame canframe, char *netframe)
@@ -55,10 +30,10 @@ void printcanframe(char *title, struct can_frame canframe, char *netframe)
     strcat(canstr, buff);
   }
 
-  if ( debug > 1 ) printf("%*s | %*s | %s", -11, title, -40, canstr, netframe);
   if ( (debug > 0) & ( ((c2y_nb + y2c_nb + y2b_nb - 1) % 500) == 0) ) {
   	printf("    ### STATS => Can to YD : %d frames - YD to CAN : %d frames - YD back : %d frames\n", c2y_nb, y2c_nb, y2b_nb);
   }
+  if ( debug > 1 ) printf("%*s | %*s | %s", -11, title, -40, canstr, netframe);
 	
 }
 
@@ -67,25 +42,19 @@ int ydnr2canframe(char *ydnr, struct can_frame *canframe)
   char buffer[9];
   unsigned long ibuff;
 
- 	// printf(" Get CAN ID\n");
   buffer[8] = '\0';
   strncpy(buffer, ydnr + 15, 8);
   sscanf(buffer, "%8lx", &ibuff);
   canframe->can_id = ibuff | CAN_EFF_FLAG;
- 	//printf("bit: "PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(ibuff));
- 	//printf("bit: "PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(canframe->can_id));
 
- 	// printf("Get CAN DLC\n");
   canframe->can_dlc = (strlen(ydnr) - 25) / 3;
 
- 	// printf("Get CAN DATAs\n");
   buffer[2] = '\0';
   for (int i = 0; i < canframe->can_dlc; i++)
   {
     strncpy(buffer, ydnr + 24 + (3 *i), 2);
     sscanf(buffer, "%lx", &ibuff);
     canframe->data[i] = ibuff;
-   	//printf("%d - ", ibuff);
   }
 
   if (ydnr[13] == 'T')
@@ -164,12 +133,8 @@ void *ydnr2can()
     while (buffer[0] != 0x0a)
     {
       read(snet, buffer, 1);
-     	//printf("=> %s\n", buffer);
       strcat(buff, buffer);
-     	//printf("==> %s\n", buff);
     }
-
-   	//printf("YDNR line : %s", buff);
 
     if (ydnr2canframe(buff, &frame) == 0) {
       y2c_nb++;
@@ -211,8 +176,6 @@ void *can2ydnr()
     } else {
         sprintf(buff, "%03lX", (long unsigned int) frame.can_id);
     }
-
-   	//printf("bit: "PRINTF_BINARY_PATTERN_INT32"\n", PRINTF_BYTE_TO_BINARY_INT32(frame.can_id));
 
     for (int i = 0; i < frame.can_dlc; i++)
     {
