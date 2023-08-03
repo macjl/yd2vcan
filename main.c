@@ -36,7 +36,7 @@ PRINTF_BINARY_PATTERN_INT32 PRINTF_BINARY_PATTERN_INT32
 PRINTF_BYTE_TO_BINARY_INT32((i) >> 32), PRINTF_BYTE_TO_BINARY_INT32(i)
 /*--- end macros --- */
 
-int debug=0, snet, scan;
+int debug=0, snet, scan, c2y_nb=0, y2c_nb=0, y2b_nb=0;
 
 void printcanframe(char *title, struct can_frame canframe, char *netframe)
 {
@@ -55,7 +55,11 @@ void printcanframe(char *title, struct can_frame canframe, char *netframe)
     strcat(canstr, buff);
   }
 
-  printf("%*s | %*s | %s", -11, title, -40, canstr, netframe);
+  if ( debug > 1 ) printf("%*s | %*s | %s", -11, title, -40, canstr, netframe);
+  if ( (debug > 0) & ( ((c2y_nb + y2c_nb + y2b_nb - 1) % 500) == 0) ) {
+  	printf("    ### STATS => Can to YD : %d frames - YD to CAN : %d frames - YD back : %d frames\n", c2y_nb, y2c_nb, y2b_nb);
+  }
+	
 }
 
 int ydnr2canframe(char *ydnr, struct can_frame *canframe)
@@ -168,16 +172,19 @@ void *ydnr2can()
    	//printf("YDNR line : %s", buff);
 
     if (ydnr2canframe(buff, &frame) == 0) {
+      y2c_nb++;
 
       if (write(scan, &frame, sizeof(struct can_frame)) != sizeof(struct can_frame))
       {
         perror("Write");
         exit(1);
       }
-      else if ( debug > 0 )
-      {
-        printcanframe("Net to CAN", frame, buff);
-      }
+
+      printcanframe("Net to CAN", frame, buff);
+
+    } else {
+      y2b_nb++;
+      printcanframe("Net ack  ", frame, buff);
     }
   }
 }
@@ -214,15 +221,15 @@ void *can2ydnr()
     }
 
     strcat(buff, "\r\n");
+
+    c2y_nb++;
     if (write(snet, buff, sizeof(buff)) != sizeof(buff))
     {
       perror("Write");
       exit(1);
     }
-    else if ( debug > 0 )
-    {
-      printcanframe("CAN to Net", frame, buff);
-    }
+    
+    printcanframe("CAN to Net", frame, buff);
   }
 }
 
@@ -263,9 +270,12 @@ int main(int argc, char **argv)
 	 return 32;
   }
 
-  printf("YDNR device: \"%s:%d\"\r\n", ip, port);
-  printf("CAN device: \"%s\"\r\n", canport);
-  printf("Log level : %d", debug);
+  if (debug > 0)
+  {
+    printf("YDNR device: \"%s:%d\"\n", ip, port);
+    printf("CAN device: \"%s\"\n", canport);
+    printf("Log level : %d\n", debug);
+  }
 
   if ( (snet = openydnr(ip, port)) < 0 )
     return -1;
